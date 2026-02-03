@@ -37,5 +37,21 @@ From the repo root:
 
 Add `-Dspring-boot.run.profiles=local` if using local profile.
 
+## Docker (Compose)
+Ensure you have local certificates in `./certs`:
+
+- `certs/cert-dev/cert.pem`
+- `certs/cert-dev/ec_key.pem`
+- `certs/trusted_certs/`
+
+Then run:
+
+- `docker compose up`
+
+After startup, the APIs are available at:
+
+- Swagger UI (Trusted Party): http://localhost:8020/swagger-ui/index.html
+- Swagger UI (Provenance Storage): http://localhost:8000/swagger-ui/index.html
+
 ## Security
 Do **not** commit private keys. Keep certificates and local secrets outside Git or in ignored local profile files.
