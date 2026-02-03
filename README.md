@@ -53,5 +53,17 @@ After startup, the APIs are available at:
 - Swagger UI (Trusted Party): http://localhost:8020/swagger-ui/index.html
 - Swagger UI (Provenance Storage): http://localhost:8000/swagger-ui/index.html
 
+Monitoring (Docker Compose):
+
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (admin/admin)
+
+## Actuator & Metrics
+Both services expose Actuator endpoints. These are useful for health checks and Prometheus scraping:
+
+- Health: http://localhost:8020/actuator/health and http://localhost:8000/actuator/health
+- Metrics list: http://localhost:8020/actuator/metrics and http://localhost:8000/actuator/metrics
+- Prometheus: http://localhost:8020/actuator/prometheus and http://localhost:8000/actuator/prometheus
+
 ## Security
 Do **not** commit private keys. Keep certificates and local secrets outside Git or in ignored local profile files.
