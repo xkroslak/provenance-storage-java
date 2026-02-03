@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: trusted-party-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["trusted-party-service:8020"]
+
+  - job_name: distributed-prov-system-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["distributed-prov-system-service:8000"]
