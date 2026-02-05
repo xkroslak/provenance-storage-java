@@ -21,9 +21,9 @@ import cz.muni.fi.distributed_prov_system.exceptions.ConflictException;
 import cz.muni.fi.distributed_prov_system.exceptions.NotFoundException;
 import cz.muni.fi.distributed_prov_system.exceptions.UnauthorizedException;
 import cz.muni.fi.distributed_prov_system.utils.TokenUtils;
-import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidatorFirst;
+import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidatorImpl;
 import cz.muni.fi.distributed_prov_system.utils.prov.InputGraphChecker;
-import cz.muni.fi.distributed_prov_system.utils.prov.ProvDocumentValidatorExternal;
+import cz.muni.fi.distributed_prov_system.utils.prov.ProvDocumentValidatorImpl;
 import cz.muni.fi.distributed_prov_system.utils.prov.SubgraphUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -81,8 +81,8 @@ public class DocumentService {
             body.getDocumentFormat(),
             requestPath,
             appProperties,
-            new CPMValidatorFirst(),
-            new ProvDocumentValidatorExternal()
+            new CPMValidatorImpl(),
+            new ProvDocumentValidatorImpl()
         );
         try {
             checker.parseGraph();
@@ -236,8 +236,8 @@ public class DocumentService {
                 body.getDocumentFormat(),
                 requestPath,
                 appProperties,
-                new CPMValidatorFirst(),
-                new ProvDocumentValidatorExternal()
+                new CPMValidatorImpl(),
+                new ProvDocumentValidatorImpl()
         );
 
         try {
