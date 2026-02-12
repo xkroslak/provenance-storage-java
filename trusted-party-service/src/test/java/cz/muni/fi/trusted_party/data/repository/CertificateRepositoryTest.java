@@ -101,6 +101,23 @@ class CertificateRepositoryTest {
 	}
 
 	@Test
+	void findByOrganizationOrgNameAndCertificateTypeAndIsRevoked_revokedMatches_returnsList() {
+		Organization organization = saveOrganization("org-revoked");
+		saveCertificate("cert-revoked-1", organization, CertificateType.CLIENT, true);
+		saveCertificate("cert-revoked-2", organization, CertificateType.CLIENT, false);
+
+		List<Certificate> result = certificateRepository
+				.findByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+						"org-revoked",
+						CertificateType.CLIENT,
+						true);
+
+		assertThat(result)
+				.extracting(Certificate::getCertDigest)
+				.containsExactly("cert-revoked-1");
+	}
+
+	@Test
 	void findFirstByOrganizationOrgNameAndCertificateTypeAndIsRevoked_existingMatches_returnsOne() {
 		Organization organization = saveOrganization("org-first");
 		saveCertificate("cert-first-1", organization, CertificateType.INTERMEDIATE, false);
@@ -150,6 +167,14 @@ class CertificateRepositoryTest {
 
 		Certificate result = certificateRepository
 				.findFirstByOrganizationOrgNameAndIsRevoked("org-none", false);
+
+		assertThat(result).isNull();
+	}
+
+	@Test
+	void findFirstByOrganizationOrgNameAndIsRevoked_nonExistingOrganization_returnsNull() {
+		Certificate result = certificateRepository
+				.findFirstByOrganizationOrgNameAndIsRevoked("org-missing", false);
 
 		assertThat(result).isNull();
 	}
