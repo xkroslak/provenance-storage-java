@@ -269,6 +269,87 @@ class OrganizationServiceTest {
                 .contains(true, false);
     }
 
+    @Test
+    void updateCertificates_existingIntermediate_unrevokesExistingCertificate() {
+        StoreCertOrganizationDTO body = buildStoreDto("org-1");
+        Organization organization = new Organization();
+        organization.setOrgName("org-1");
+
+        Certificate existingClient = new Certificate();
+        existingClient.setCertificateType(CertificateType.CLIENT);
+        existingClient.setIsRevoked(false);
+        existingClient.setReceived_on(LocalDateTime.now());
+
+        Certificate existingIntermediate = new Certificate();
+        existingIntermediate.setCertDigest("digest-int-1");
+        existingIntermediate.setCertificateType(CertificateType.INTERMEDIATE);
+        existingIntermediate.setIsRevoked(true);
+        existingIntermediate.setReceived_on(LocalDateTime.now());
+
+        when(organizationRepository.findById("org-1")).thenReturn(Optional.of(organization));
+        when(appProperties.loadTrustedCertificates()).thenReturn(List.of("trusted"));
+        when(certificateRepository.findByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+                "org-1", CertificateType.CLIENT, false)).thenReturn(List.of(existingClient));
+        when(certificateRepository.findByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+                "org-1", CertificateType.INTERMEDIATE, false)).thenReturn(List.of());
+        when(certificateRepository.findByCertDigest("digest-int-1"))
+                .thenReturn(Optional.of(existingIntermediate));
+
+        try (MockedStatic<TrustedPartyUtils> utils = mockStatic(TrustedPartyUtils.class)) {
+            utils.when(() -> TrustedPartyUtils.verifyChainOfTrust(
+                    body.getClientCertificate(),
+                    body.getIntermediateCertificates(),
+                    List.of("trusted"))).thenReturn(true);
+            utils.when(() -> TrustedPartyUtils.computeCertificateDigest("client-cert"))
+                    .thenReturn("digest-client");
+            utils.when(() -> TrustedPartyUtils.computeCertificateDigest("intermediate-1"))
+                    .thenReturn("digest-int-1");
+
+            organizationService.updateCertificates("org-1", body);
+        }
+
+        assertThat(existingIntermediate.getIsRevoked()).isFalse();
+    }
+
+    @Test
+    void updateCertificates_alreadyRevokedCertificates_remainRevoked() {
+        StoreCertOrganizationDTO body = buildStoreDto("org-1");
+        Organization organization = new Organization();
+        organization.setOrgName("org-1");
+
+        Certificate revokedClient = new Certificate();
+        revokedClient.setCertificateType(CertificateType.CLIENT);
+        revokedClient.setIsRevoked(true);
+
+        Certificate revokedIntermediate = new Certificate();
+        revokedIntermediate.setCertificateType(CertificateType.INTERMEDIATE);
+        revokedIntermediate.setIsRevoked(true);
+
+        when(organizationRepository.findById("org-1")).thenReturn(Optional.of(organization));
+        when(appProperties.loadTrustedCertificates()).thenReturn(List.of("trusted"));
+        when(certificateRepository.findByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+                "org-1", CertificateType.CLIENT, false)).thenReturn(List.of());
+        when(certificateRepository.findByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+                "org-1", CertificateType.INTERMEDIATE, false)).thenReturn(List.of());
+        when(certificateRepository.findByCertDigest("digest-int-1")).thenReturn(Optional.empty());
+
+        try (MockedStatic<TrustedPartyUtils> utils = mockStatic(TrustedPartyUtils.class)) {
+            utils.when(() -> TrustedPartyUtils.verifyChainOfTrust(
+                    body.getClientCertificate(),
+                    body.getIntermediateCertificates(),
+                    List.of("trusted"))).thenReturn(true);
+            utils.when(() -> TrustedPartyUtils.computeCertificateDigest("client-cert"))
+                    .thenReturn("digest-client");
+            utils.when(() -> TrustedPartyUtils.computeCertificateDigest("intermediate-1"))
+                    .thenReturn("digest-int-1");
+
+            organizationService.updateCertificates("org-1", body);
+        }
+
+        assertThat(revokedClient.getIsRevoked()).isTrue();
+        assertThat(revokedIntermediate.getIsRevoked()).isTrue();
+    }
+
     private StoreCertOrganizationDTO buildStoreDto(String orgId) {
         StoreCertOrganizationDTO body = new StoreCertOrganizationDTO();
         body.setOrganizationId(orgId);
