@@ -63,6 +63,28 @@ class TokenRepositoryTest {
 		assertThat(result).isEmpty();
 	}
 
+	@Test
+	void save_validToken_persistsAndLoads() {
+		Document document = saveDocument("doc-save");
+
+		Token token = new Token();
+		token.setDocument(document);
+		token.setHash("hash-save");
+		token.setHashFunction(HashFunction.SHA512);
+		token.setCreatedOn(LocalDateTime.now());
+		token.setSignature("sig-save");
+
+		Token saved = tokenRepository.save(token);
+		entityManager.flush();
+		entityManager.clear();
+
+		Token reloaded = tokenRepository.findById(saved.getId()).orElseThrow();
+
+		assertThat(reloaded.getHash()).isEqualTo("hash-save");
+		assertThat(reloaded.getHashFunction()).isEqualTo(HashFunction.SHA512);
+		assertThat(reloaded.getDocument().getIdentifier()).isEqualTo("doc-save");
+	}
+
 	private Document saveDocument(String identifier) {
 		Organization organization = new Organization();
 		organization.setOrgName("org-" + identifier);
