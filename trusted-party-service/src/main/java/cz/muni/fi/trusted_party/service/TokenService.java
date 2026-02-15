@@ -166,7 +166,7 @@ public class TokenService {
                 throw new InvalidRequestException("Missing organizationId");
             }
         }
-        // Use fully-qualified name to avoid clash with cz.muni.fi.trusted_party.data.model.Document
+        // Used fully-qualified name to avoid clash with cz.muni.fi.trusted_party.data.model.Document
         org.openprovenance.prov.model.Document provDocument = ProvToolboxUtils.parseDocument(
                 body.getDocument(), body.getDocumentFormat());
 
