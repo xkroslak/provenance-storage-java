@@ -13,7 +13,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Disabled("Requires local test certificates; keep disabled unless certs are available")
+//@Disabled("Requires local test certificates; keep disabled unless certs are available")
 class TrustedPartyUtilsTest {
 
     @Test

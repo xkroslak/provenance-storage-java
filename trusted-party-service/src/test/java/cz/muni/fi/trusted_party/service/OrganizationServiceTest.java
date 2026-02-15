@@ -13,6 +13,7 @@ import cz.muni.fi.trusted_party.exceptions.OrganizationAlreadyExistsException;
 import cz.muni.fi.trusted_party.exceptions.OrganizationIdMismatchException;
 import cz.muni.fi.trusted_party.exceptions.OrganizationNotFoundException;
 import cz.muni.fi.trusted_party.utils.TrustedPartyUtils;
+import cz.muni.fi.trusted_party.utils.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -351,10 +352,8 @@ class OrganizationServiceTest {
     }
 
     private StoreCertOrganizationDTO buildStoreDto(String orgId) {
-        StoreCertOrganizationDTO body = new StoreCertOrganizationDTO();
-        body.setOrganizationId(orgId);
-        body.setClientCertificate("client-cert");
-        body.setIntermediateCertificates(List.of("intermediate-1"));
+                StoreCertOrganizationDTO body = TestDataFactory.storeCertRequest();
+                body.setOrganizationId(orgId);
         return body;
     }
 }

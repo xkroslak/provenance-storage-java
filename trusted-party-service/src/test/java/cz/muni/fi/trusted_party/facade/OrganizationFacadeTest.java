@@ -6,6 +6,7 @@ import cz.muni.fi.trusted_party.data.model.Organization;
 import cz.muni.fi.trusted_party.data.records.OrganizationAndCertificates;
 import cz.muni.fi.trusted_party.mappers.OrganizationMapper;
 import cz.muni.fi.trusted_party.service.OrganizationService;
+import cz.muni.fi.trusted_party.utils.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -35,8 +36,7 @@ class OrganizationFacadeTest {
         Organization organization = new Organization();
         organization.setOrgName("org-1");
         OrganizationAndCertificates orgCert = new OrganizationAndCertificates(organization, null, null);
-        OrganizationDTO dto = new OrganizationDTO();
-        dto.setOrganizationId("org-1");
+        OrganizationDTO dto = TestDataFactory.organizationDto("org-1");
 
         when(organizationService.getAllOrganizations()).thenReturn(List.of(orgCert));
         when(organizationMapper.mapToList(List.of(orgCert))).thenReturn(List.of(dto));
@@ -51,8 +51,7 @@ class OrganizationFacadeTest {
         Organization organization = new Organization();
         organization.setOrgName("org-1");
         OrganizationAndCertificates orgCert = new OrganizationAndCertificates(organization, null, List.of());
-        OrganizationDTO dto = new OrganizationDTO();
-        dto.setOrganizationId("org-1");
+        OrganizationDTO dto = TestDataFactory.organizationDto("org-1");
 
         when(organizationService.getOrganization("org-1")).thenReturn(orgCert);
         when(organizationMapper.mapToOrganizationDTO(orgCert, false)).thenReturn(dto);
@@ -68,8 +67,7 @@ class OrganizationFacadeTest {
         Organization organization = new Organization();
         organization.setOrgName("org-1");
         OrganizationAndCertificates orgCert = new OrganizationAndCertificates(organization, null, List.of());
-        OrganizationDTO dto = new OrganizationDTO();
-        dto.setOrganizationId("org-1");
+        OrganizationDTO dto = TestDataFactory.organizationDto("org-1");
 
         when(organizationService.getOrganization("org-1")).thenReturn(orgCert);
         when(organizationMapper.mapToOrganizationDTO(orgCert, true)).thenReturn(dto);
@@ -82,8 +80,7 @@ class OrganizationFacadeTest {
 
     @Test
     void updateCertificates_delegatesToService() {
-        StoreCertOrganizationDTO body = new StoreCertOrganizationDTO();
-        body.setOrganizationId("org-1");
+        StoreCertOrganizationDTO body = TestDataFactory.storeCertRequest();
 
         organizationFacade.updateCertificates("org-1", body);
 
@@ -92,8 +89,7 @@ class OrganizationFacadeTest {
 
     @Test
     void registerOrganization_delegatesToService() {
-        StoreCertOrganizationDTO body = new StoreCertOrganizationDTO();
-        body.setOrganizationId("org-1");
+        StoreCertOrganizationDTO body = TestDataFactory.storeCertRequest();
 
         organizationFacade.registerOrganization("org-1", body);
 

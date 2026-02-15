@@ -17,6 +17,7 @@ import cz.muni.fi.trusted_party.exceptions.InvalidTimestampException;
 import cz.muni.fi.trusted_party.exceptions.MissingSignatureException;
 import cz.muni.fi.trusted_party.exceptions.OrganizationNotFoundException;
 import cz.muni.fi.trusted_party.exceptions.SignatureVerificationException;
+import cz.muni.fi.trusted_party.utils.TestDataFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -330,25 +331,19 @@ class TokenServiceTest {
         }
 
     private TokenRequestDTO buildRequest(DocumentType documentType) {
-        TokenRequestDTO body = new TokenRequestDTO();
-        body.setOrganizationId("org-1");
-        body.setDocument("ZHVtbXktZG9j");
-        body.setDocumentFormat("json");
+        TokenRequestDTO body = TestDataFactory.tokenRequest();
         body.setDocumentType(documentType);
         body.setCreatedOn(LocalDateTime.now().minusMinutes(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        body.setSignature("sig");
         return body;
     }
 
     private TokenRequestDTO buildRequestWithBundleId(DocumentType documentType, String bundleId) {
-        TokenRequestDTO body = new TokenRequestDTO();
-        body.setOrganizationId("org-1");
+        TokenRequestDTO body = TestDataFactory.tokenRequest();
         body.setDocument(base64Of("document\nprefix ex <http://example.org/>\n"
                 + "bundle ex:" + bundleId + "\nentity(ex:e1)\nendBundle\nendDocument"));
         body.setDocumentFormat("provn");
         body.setDocumentType(documentType);
         body.setCreatedOn(LocalDateTime.now().minusMinutes(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-        body.setSignature("sig");
         return body;
     }
 

@@ -7,6 +7,7 @@ import cz.muni.fi.trusted_party.data.model.Document;
 import cz.muni.fi.trusted_party.data.model.Token;
 import cz.muni.fi.trusted_party.mappers.TokenMapper;
 import cz.muni.fi.trusted_party.service.TokenService;
+import cz.muni.fi.trusted_party.utils.TestDataFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -70,7 +71,7 @@ class TokenFacadeTest {
 
     @Test
     void issueToken_returnsMappedList() {
-        TokenRequestDTO body = new TokenRequestDTO();
+        TokenRequestDTO body = TestDataFactory.tokenRequest();
         Token token = new Token();
         TokenDTO dto = new TokenDTO();
 
@@ -84,7 +85,7 @@ class TokenFacadeTest {
 
     @Test
     void verifySignature_delegatesToService() {
-        TokenRequestDTO body = new TokenRequestDTO();
+        TokenRequestDTO body = TestDataFactory.tokenRequest();
         when(tokenService.verifySignature(body)).thenReturn(true);
 
         boolean result = tokenFacade.verifySignature(body);
