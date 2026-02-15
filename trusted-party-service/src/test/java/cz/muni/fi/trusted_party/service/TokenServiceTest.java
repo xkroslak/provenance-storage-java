@@ -3,6 +3,7 @@ package cz.muni.fi.trusted_party.service;
 import cz.muni.fi.trusted_party.api.Token.TokenRequestDTO;
 import cz.muni.fi.trusted_party.config.AppProperties;
 import cz.muni.fi.trusted_party.data.enums.DocumentType;
+import cz.muni.fi.trusted_party.data.enums.HashFunction;
 import cz.muni.fi.trusted_party.data.model.Document;
 import cz.muni.fi.trusted_party.data.model.Organization;
 import cz.muni.fi.trusted_party.data.model.Token;
@@ -18,19 +19,42 @@ import cz.muni.fi.trusted_party.exceptions.MissingSignatureException;
 import cz.muni.fi.trusted_party.exceptions.OrganizationNotFoundException;
 import cz.muni.fi.trusted_party.exceptions.SignatureVerificationException;
 import cz.muni.fi.trusted_party.utils.TestDataFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.StringWriter;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -330,6 +354,108 @@ class TokenServiceTest {
             .hasMessageContaining("Invalid signature");
         }
 
+    @Test
+    void verifySignature_validSignature_returnsTrue() throws Exception {
+        KeyPair keyPair = generateEcKeyPair();
+        X509Certificate x509 = createSelfSignedCertificate(keyPair);
+        String certPem = toPem(x509);
+
+        Organization organization = new Organization();
+        organization.setOrgName("org-1");
+        cz.muni.fi.trusted_party.data.model.Certificate certificate =
+            new cz.muni.fi.trusted_party.data.model.Certificate();
+        certificate.setCert(certPem);
+
+        String graph = "graph";
+        byte[] graphBytes = graph.getBytes(StandardCharsets.UTF_8);
+        Signature signer = Signature.getInstance("SHA256withECDSA");
+        signer.initSign(keyPair.getPrivate());
+        signer.update(graphBytes);
+        String signatureB64 = Base64.getEncoder().encodeToString(signer.sign());
+
+        TokenRequestDTO body = new TokenRequestDTO();
+        body.setOrganizationId("org-1");
+        body.setDocument(Base64.getEncoder().encodeToString(graphBytes));
+        body.setSignature(signatureB64);
+
+        when(organizationRepository.findById("org-1")).thenReturn(Optional.of(organization));
+        when(certificateRepository.findFirstByOrganizationOrgNameAndCertificateTypeAndIsRevoked(
+            "org-1",
+            cz.muni.fi.trusted_party.data.enums.CertificateType.CLIENT,
+            false)).thenReturn(certificate);
+
+        boolean verified = tokenService.verifySignature(body);
+
+        assertThat(verified).isTrue();
+    }
+
+    @Test
+    void issueTokenAndStoreDoc_metaSignsTokenData() throws Exception {
+        KeyPair keyPair = generateEcKeyPair();
+        X509Certificate x509 = createSelfSignedCertificate(keyPair);
+        String certPem = toPem(x509);
+        String privateKeyPem = toPkcs8Pem(keyPair.getPrivate());
+
+        Path keyPath = Files.createTempFile("tp-test-key", ".pem");
+        Files.writeString(keyPath, privateKeyPem, StandardCharsets.UTF_8);
+        keyPath.toFile().deleteOnExit();
+
+        when(appProperties.getPrivateKeyPath()).thenReturn(keyPath.toString());
+        when(appProperties.getCertificate()).thenReturn(certPem);
+        when(appProperties.getId()).thenReturn("tp-id");
+        when(appProperties.getFqdn()).thenReturn("tp.example");
+
+        TokenRequestDTO body = new TokenRequestDTO();
+        body.setOrganizationId("org-1");
+        body.setDocumentFormat("provn");
+        body.setDocumentType(DocumentType.META);
+        body.setDocument(base64Of(
+                "document\n"
+                        + "prefix ex <http://example.org/>\n"
+                        + "bundle ex:b1\n"
+                        + "entity(ex:e1)\n"
+                        + "endBundle\n"
+                        + "endDocument"));
+        LocalDateTime createdOn = LocalDateTime.of(2025, 1, 1, 10, 0);
+        body.setCreatedOn(createdOn.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+        List<Token> tokens = tokenService.issueTokenAndStoreDoc(body);
+
+        assertThat(tokens).hasSize(1);
+        Token token = tokens.get(0);
+        Document doc = token.getDocument();
+
+        assertThat(token.getHashFunction()).isEqualTo(HashFunction.SHA256);
+        assertThat(doc.getSignature()).isNull();
+        assertThat(doc.getOrganization().getOrgName()).isEqualTo("org-1");
+        assertThat(doc.getCreatedOn()).isEqualTo(createdOn);
+
+        String expectedHash = sha256Hex(Base64.getDecoder().decode(body.getDocument()));
+        assertThat(token.getHash()).isEqualTo(expectedHash);
+
+        Map<String, Object> additionalData = new LinkedHashMap<>();
+        additionalData.put("bundle", doc.getIdentifier());
+        additionalData.put("hashFunction", "SHA256");
+        additionalData.put("trustedPartyUri", "tp.example");
+        additionalData.put("trustedPartyCertificate", certPem);
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("originatorId", "org-1");
+        data.put("authorityId", "tp-id");
+        data.put("tokenTimestamp", token.getCreatedOn());
+        data.put("documentCreationTimestamp", doc.getCreatedOn());
+        data.put("documentDigest", token.getHash());
+        data.put("additionalData", additionalData);
+
+        byte[] canonical = canonicalizeData(data);
+        Signature verifier = Signature.getInstance("SHA256withECDSA");
+        verifier.initVerify(keyPair.getPublic());
+        verifier.update(canonical);
+
+        boolean verified = verifier.verify(Base64.getDecoder().decode(token.getSignature()));
+        assertThat(verified).isTrue();
+    }
+
     private TokenRequestDTO buildRequest(DocumentType documentType) {
         TokenRequestDTO body = TestDataFactory.tokenRequest();
         body.setDocumentType(documentType);
@@ -349,5 +475,77 @@ class TokenServiceTest {
 
     private String base64Of(String content) {
         return Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static KeyPair generateEcKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
+        generator.initialize(256, new SecureRandom());
+        return generator.generateKeyPair();
+    }
+
+    private static X509Certificate createSelfSignedCertificate(KeyPair keyPair) throws Exception {
+        long now = System.currentTimeMillis();
+        Date notBefore = new Date(now - 60_000L);
+        Date notAfter = new Date(now + 86_400_000L);
+        BigInteger serial = new BigInteger(64, new SecureRandom());
+        X500Name subject = new X500Name("CN=Test");
+
+        JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
+                subject,
+                serial,
+                notBefore,
+                notAfter,
+                subject,
+                keyPair.getPublic());
+
+        ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA")
+                .build(keyPair.getPrivate());
+        X509CertificateHolder holder = builder.build(signer);
+        return new JcaX509CertificateConverter().getCertificate(holder);
+    }
+
+    private static String toPem(Object value) throws Exception {
+        StringWriter writer = new StringWriter();
+        try (JcaPEMWriter pemWriter = new JcaPEMWriter(writer)) {
+            pemWriter.writeObject(value);
+        }
+        return writer.toString();
+    }
+
+    private static String toPkcs8Pem(PrivateKey privateKey) {
+        String base64 = Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII))
+                .encodeToString(privateKey.getEncoded());
+        return "-----BEGIN PRIVATE KEY-----\n"
+                + base64
+                + "\n-----END PRIVATE KEY-----\n";
+    }
+
+    private static String sha256Hex(byte[] data) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashed = digest.digest(data);
+        StringBuilder sb = new StringBuilder(hashed.length * 2);
+        for (byte b : hashed) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+    private static byte[] canonicalizeData(Map<String, Object> data) throws Exception {
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        Object sorted = sortRecursively(data);
+        String json = mapper.writeValueAsString(sorted);
+        return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static Object sortRecursively(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            TreeMap<String, Object> sorted = new TreeMap<>();
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                sorted.put(key, sortRecursively(entry.getValue()));
+            }
+            return sorted;
+        }
+        return value;
     }
 }
