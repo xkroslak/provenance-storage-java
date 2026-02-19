@@ -1,9 +1,10 @@
 package cz.muni.fi.distributed_prov_system.facade;
 
+import cz.muni.fi.distributed_prov_system.api.MetaResponseDTO;
+
 public interface MetaFacade {
 
     boolean metaBundleExists(String metaId);
 
-    //TODO: change object
-    Object getMeta(String metaId, String format, String organizationId);
+    MetaResponseDTO getMeta(String metaId, String format, String organizationId);
 }
