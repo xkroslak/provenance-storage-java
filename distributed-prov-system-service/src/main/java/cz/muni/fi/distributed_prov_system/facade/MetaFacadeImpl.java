@@ -1,5 +1,6 @@
 package cz.muni.fi.distributed_prov_system.facade;
 
+import cz.muni.fi.distributed_prov_system.api.MetaResponseDTO;
 import cz.muni.fi.distributed_prov_system.service.MetaService;
 import cz.muni.fi.distributed_prov_system.exceptions.MetaNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +22,7 @@ public class MetaFacadeImpl implements MetaFacade {
     }
 
     @Override
-    public Object getMeta(String metaId, String format, String organizationId) {
+    public MetaResponseDTO getMeta(String metaId, String format, String organizationId) {
         // Validate format
         if (!format.equals("rdf") && !format.equals("json") && !format.equals("xml") && !format.equals("provn")) {
             throw new IllegalArgumentException("Requested format [" + format + "] is not supported!");
@@ -44,19 +45,9 @@ public class MetaFacadeImpl implements MetaFacade {
             Object payload = metaService.buildMetaTokenPayload(graph, metaId, format, organizationId);
             Object token = metaService.sendTokenRequestToTp(payload, tpUrl);
 
-            return new MetaResponse(graph, token);
+            return new MetaResponseDTO(graph, token);
         } else {
-            return new MetaResponse(graph, null);
-        }
-    }
-
-    // DTO for response
-    public static class MetaResponse {
-        public String graph;
-        public Object token;
-        public MetaResponse(String graph, Object token) {
-            this.graph = graph;
-            this.token = token;
+            return new MetaResponseDTO(graph, null);
         }
     }
 }
