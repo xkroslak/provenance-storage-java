@@ -4,6 +4,7 @@ import cz.muni.fi.distributed_prov_system.config.AppProperties;
 import cz.muni.fi.distributed_prov_system.utils.ProvConstants;
 import org.openprovenance.prov.model.*;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class InputGraphChecker {
 
     public String getBundleId() {
         ensureParsed();
-        return bundle.getId().getLocalPart();
+        return resolveBundleId(bundle.getId());
     }
 
     public String getMetaProvenanceId() {
@@ -77,16 +78,125 @@ public class InputGraphChecker {
 
     public void checkIdsMatch(String graphId) {
         ensureParsed();
-        String bundleId = bundle.getId().getLocalPart();
+        QualifiedName bundleQName = bundle.getId();
+        String bundleId = resolveBundleId(bundleQName);
         if (!bundleId.equals(graphId)) {
             throw new IllegalArgumentException(
                     "The bundle id [" + bundleId + "] does not match requested id [" + graphId + "].");
         }
-        if (bundle.getId().getUri() != null && requestPath != null &&
-                !bundle.getId().getUri().endsWith(requestPath)) {
+        String bundleUriPath = resolveBundlePath(bundleQName);
+        String expectedPath = extractPath(requestPath);
+        if (bundleUriPath != null && expectedPath != null && !bundleUriPath.endsWith(expectedPath)) {
             throw new IllegalArgumentException(
                     "The bundle identifier does not end with request path [" + requestPath + "].");
         }
+    }
+
+    private String resolveBundlePath(QualifiedName qualifiedName) {
+        if (qualifiedName == null) {
+            return null;
+        }
+
+        String localId = extractIdSegment(qualifiedName.getLocalPart());
+        String pathFromUri = extractPath(qualifiedName.getUri());
+        if (pathFromUri != null) {
+            if (localId != null && !localId.isBlank()) {
+                if (pathFromUri.endsWith("/" + localId)) {
+                    return pathFromUri;
+                }
+                if (pathFromUri.endsWith("/")) {
+                    return pathFromUri + localId;
+                }
+            }
+            return pathFromUri;
+        }
+
+        String pathFromNamespace = extractPath(qualifiedName.getNamespaceURI());
+        if (pathFromNamespace != null) {
+            if (localId != null && !localId.isBlank()) {
+                return pathFromNamespace.endsWith("/")
+                        ? pathFromNamespace + localId
+                        : pathFromNamespace + "/" + localId;
+            }
+            return pathFromNamespace;
+        }
+
+        return extractPath(qualifiedName.getLocalPart());
+    }
+
+    private String resolveBundleId(QualifiedName qualifiedName) {
+        if (qualifiedName == null) {
+            return "";
+        }
+
+        String fromLocalPart = extractIdSegment(qualifiedName.getLocalPart());
+        if (fromLocalPart != null && !fromLocalPart.isBlank()) {
+            return fromLocalPart;
+        }
+
+        String fromUriPath = extractIdSegment(extractPath(qualifiedName.getUri()));
+        return fromUriPath == null ? "" : fromUriPath;
+    }
+
+    private String extractPath(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        if (normalized.startsWith("/")) {
+            return normalized;
+        }
+
+        try {
+            URI uri = URI.create(normalized);
+            String path = uri.getPath();
+            if (path != null && !path.isBlank()) {
+                if (uri.isAbsolute() || normalized.startsWith("//")) {
+                    return path;
+                }
+                if (path.contains("/")) {
+                    return path.startsWith("/") ? path : "/" + path;
+                }
+                return null;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Fall back to heuristic parsing for non-standard URI values.
+        }
+
+        int slash = normalized.indexOf('/');
+        if (slash >= 0) {
+            return normalized.substring(slash);
+        }
+        return null;
+    }
+
+    private String extractIdSegment(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        String result = value.trim();
+        int queryIndex = result.indexOf('?');
+        if (queryIndex >= 0) {
+            result = result.substring(0, queryIndex);
+        }
+        int fragmentIndex = result.indexOf('#');
+        if (fragmentIndex >= 0) {
+            result = result.substring(0, fragmentIndex);
+        }
+
+        int slashIndex = result.lastIndexOf('/');
+        if (slashIndex >= 0 && slashIndex < result.length() - 1) {
+            result = result.substring(slashIndex + 1);
+        }
+
+        int colonIndex = result.lastIndexOf(':');
+        if (colonIndex >= 0 && colonIndex < result.length() - 1) {
+            result = result.substring(colonIndex + 1);
+        }
+
+        return result;
     }
 
     public void validateGraph() {
