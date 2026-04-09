@@ -1,0 +1,27 @@
+server:
+  port: 0
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:componenttestdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: false
+        show_sql: false
+  sql:
+    init:
+      mode: never
+
+app:
+  id: Trusted_Party
+  fqdn: trusted-party:8020
+  trustedCertsDirPath: ../certs/trusted_certs
+  publicCertPath: ../certs/cert-dev/cert.pem
+  privateKeyPath: ../certs/cert-dev/ec_key.pem

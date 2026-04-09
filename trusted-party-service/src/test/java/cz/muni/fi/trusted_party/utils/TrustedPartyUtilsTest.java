@@ -1,6 +1,7 @@
 package cz.muni.fi.trusted_party.utils;
 
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -13,8 +14,20 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@Disabled("Requires local test certificates. Keep disabled unless those certs are available")
 class TrustedPartyUtilsTest {
+
+    @BeforeAll
+    static void requireCertificateResources() {
+        boolean present = resourceExists("/certs/uni_graz/client.pem")
+                && resourceExists("/certs/uni_graz/intermediate_1.pem")
+                && resourceExists("/certs/uni_graz/intermediate_2.pem")
+                && resourceExists("/certs/uni_graz/ca.pem");
+
+        Assumptions.assumeTrue(
+                present,
+                "Skipping TrustedPartyUtilsTest because certificate test resources are missing."
+        );
+    }
 
     @Test
     void verifyChainOfTrust_validChain_returnsTrue() {
@@ -64,6 +77,14 @@ class TrustedPartyUtilsTest {
             return new String(input.readAllBytes(), StandardCharsets.UTF_8);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to read test resource: " + path, e);
+        }
+    }
+
+    private static boolean resourceExists(String path) {
+        try (InputStream input = TrustedPartyUtilsTest.class.getResourceAsStream(path)) {
+            return input != null;
+        } catch (Exception e) {
+            return false;
         }
     }
 

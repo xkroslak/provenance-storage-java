@@ -14,11 +14,13 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.util.UrlPathHelper;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
 
+@RestControllerAdvice
 public class CustomRestGlobalExceptionHandling {
 
     private static UrlPathHelper URL_PATH_HELPER = new UrlPathHelper();
@@ -38,7 +40,8 @@ public class CustomRestGlobalExceptionHandling {
 
     @ExceptionHandler({
             InvalidTimestampException.class, MissingSignatureException.class,
-            OrganizationIdMismatchException.class
+            OrganizationIdMismatchException.class,
+            IllegalArgumentException.class
     })
     public ResponseEntity<ApiError> handleBadRequest(final Exception ex, final HttpServletRequest request) {
         final ApiError apiError = new ApiError(

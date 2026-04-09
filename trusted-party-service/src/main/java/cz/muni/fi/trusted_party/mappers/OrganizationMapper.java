@@ -14,12 +14,15 @@ public class OrganizationMapper {
     public OrganizationDTO mapToOrganizationDTO(OrganizationAndCertificates orgCertEntity, boolean includeRevoked) {
         OrganizationDTO organizationResponseDTO = new OrganizationDTO();
         organizationResponseDTO.setOrganizationId(orgCertEntity.organization().getOrgName());
-        organizationResponseDTO.setClientCertificate(orgCertEntity.activeCertificate().getCert());
+        Certificate activeCertificate = orgCertEntity.activeCertificate();
+        organizationResponseDTO.setClientCertificate(activeCertificate != null ? activeCertificate.getCert() : null);
 
         if (includeRevoked) {
             List<String> revokedCertificates = new ArrayList<>();
-            for (Certificate cert : orgCertEntity.revokedCertificates()) {
-                revokedCertificates.add(cert.getCert());
+            if (orgCertEntity.revokedCertificates() != null) {
+                for (Certificate cert : orgCertEntity.revokedCertificates()) {
+                    revokedCertificates.add(cert.getCert());
+                }
             }
             organizationResponseDTO.setRevokedCertificates(revokedCertificates);
         }
