@@ -76,6 +76,16 @@ public final class TestDataFactory {
                                             ]
                                         }
                                     },
+                                    "agent": {
+                                        "cpm:agent%s": {
+                                            "prov:type": [
+                                                {
+                                                    "type": "prov:QUALIFIED_NAME",
+                                                    "$": "cpm:currentAgent"
+                                                }
+                                            ]
+                                        }
+                                    },
                                     "wasGeneratedBy": {
                                         "_:n0": {
                                             "prov:entity": "cpm:%s-connector",
@@ -88,6 +98,7 @@ public final class TestDataFactory {
                         """,
                 storagePrefix,
                 metaPrefix,
+                docId,
                 docId,
                 docId,
                 docId,
