@@ -13,10 +13,10 @@ Multi-module Maven project for the provenance storage system and trusted party s
 - PostgreSQL (for trusted-party-service)
 
 ## Local configuration (recommended)
-Local secrets should **not** be committed. Use the local profile files that are ignored by Git:
+Local secrets should **not** be committed. Copy the templates below and keep your local profile files ignored by Git:
 
-- distributed-prov-system-service/src/main/resources/application-local.yaml
-- trusted-party-service/src/main/resources/application-local.yaml
+- distributed-prov-system-service/src/main/resources/application-local.yaml.example -> copy to application-local.yaml
+- trusted-party-service/src/main/resources/application-local.yaml.example -> copy to application-local.yaml
 
 Run with the `local` profile:
 

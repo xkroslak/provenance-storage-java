@@ -1,0 +1,19 @@
+# Template for local profile. Copy to application-local.yaml and update values.
+server:
+  port: 8000
+
+spring:
+  neo4j:
+    uri: bolt://127.0.0.1:7687
+    authentication:
+      username: neo4j
+      password: CHANGE_ME
+
+trustedparty:
+  base-url: 127.0.0.1:8020
+
+app:
+  id: Pathology_Provenance_Storage
+  fqdn: prov-storage-pathology:8000
+  tpFqdn: 127.0.0.1:8020
+  disableTrustedParty: false
