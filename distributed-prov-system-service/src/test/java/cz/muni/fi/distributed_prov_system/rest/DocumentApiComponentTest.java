@@ -17,6 +17,8 @@ import cz.muni.fi.distributed_prov_system.service.ImportGraphService;
 import cz.muni.fi.distributed_prov_system.service.OrganizationService;
 import cz.muni.fi.distributed_prov_system.client.TrustedPartyClient;
 import cz.muni.fi.distributed_prov_system.utils.TestDataFactory;
+import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidator;
+import cz.muni.fi.distributed_prov_system.utils.prov.ConnectorResolvabilityChecker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,12 +85,17 @@ class DocumentApiComponentTest {
     @MockitoBean
     private DefaultTrustedPartyRepository defaultTrustedPartyRepository;
 
+    @MockitoBean
+    private ConnectorResolvabilityChecker connectorResolvabilityChecker;
+
     @BeforeEach
     void setUp() {
         when(appProperties.isDisableTrustedParty()).thenReturn(true);
         when(appProperties.getFqdn()).thenReturn("prov-storage-pathology:8000");
         when(documentRepository.existsById(any())).thenReturn(false);
-        doNothing().when(importGraphService).importGraph(any(), any(), any(), any(), any(), eq(false));
+        when(importGraphService.importGraph(any(), any(), any(), any(), any(), eq(false))).thenReturn(false);
+        when(connectorResolvabilityChecker.checkResolvability(any()))
+                .thenReturn(new CPMValidator.ValidationResult(true, "ok"));
     }
 
     @Test
@@ -246,7 +253,7 @@ class DocumentApiComponentTest {
         when(entityRepository.findById("org-1_doc-1")).thenReturn(Optional.of(entity));
         when(bundleRepository.existsById(any())).thenReturn(false);
         when(documentRepository.existsById("org-1_doc-1")).thenReturn(true);
-        doNothing().when(importGraphService).importGraph(any(), any(), any(), any(), any(), eq(true));
+        when(importGraphService.importGraph(any(), any(), any(), any(), any(), eq(true))).thenReturn(false);
 
         mockMvc.perform(put("/api/v1/organizations/org-1/documents/doc-1")
                         .contentType(MediaType.APPLICATION_JSON)

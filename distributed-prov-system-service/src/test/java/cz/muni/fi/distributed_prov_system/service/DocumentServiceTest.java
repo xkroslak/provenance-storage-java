@@ -5,6 +5,8 @@ import cz.muni.fi.distributed_prov_system.api.StoreGraphResponseDTO;
 import cz.muni.fi.distributed_prov_system.api.SubgraphResponseDTO;
 import cz.muni.fi.distributed_prov_system.client.TrustedPartyClient;
 import cz.muni.fi.distributed_prov_system.config.AppProperties;
+import cz.muni.fi.distributed_prov_system.utils.prov.ConnectorResolvabilityChecker;
+import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidator;
 import cz.muni.fi.distributed_prov_system.data.model.nodes.Bundle;
 import cz.muni.fi.distributed_prov_system.data.model.nodes.Entity;
 import cz.muni.fi.distributed_prov_system.data.model.nonprovmodels.Document;
@@ -44,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -83,10 +86,15 @@ class DocumentServiceTest {
     @Mock
     private DefaultTrustedPartyRepository defaultTrustedPartyRepository;
 
+    @Mock
+    private ConnectorResolvabilityChecker connectorResolvabilityChecker;
+
     private DocumentService documentService;
 
     @BeforeEach
     void setUp() {
+        lenient().when(connectorResolvabilityChecker.checkResolvability(any()))
+                .thenReturn(new CPMValidator.ValidationResult(true, "ok"));
         documentService = new DocumentService(
                 appProperties,
                 tpClient,
@@ -97,7 +105,8 @@ class DocumentServiceTest {
                 entityRepository,
                 bundleRepository,
                 trustedPartyRepository,
-                defaultTrustedPartyRepository
+                defaultTrustedPartyRepository,
+                connectorResolvabilityChecker
         );
     }
 

@@ -14,12 +14,16 @@ public class StoreGraphResponseDTO {
     @Schema(description = "Informational message")
     private String info;
 
+    @Schema(description = "True if a new meta-component was created, false if an existing one was reused")
+    private boolean metaComponentCreated;
+
     public StoreGraphResponseDTO() {
     }
 
-    public StoreGraphResponseDTO(JsonNode token, String info) {
+    public StoreGraphResponseDTO(JsonNode token, String info, boolean metaComponentCreated) {
         this.token = token;
         this.info = info;
+        this.metaComponentCreated = metaComponentCreated;
     }
 
     public JsonNode getToken() {
@@ -36,5 +40,13 @@ public class StoreGraphResponseDTO {
 
     public void setInfo(String info) {
         this.info = info;
+    }
+
+    public boolean isMetaComponentCreated() {
+        return metaComponentCreated;
+    }
+
+    public void setMetaComponentCreated(boolean metaComponentCreated) {
+        this.metaComponentCreated = metaComponentCreated;
     }
 }

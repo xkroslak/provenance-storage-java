@@ -27,6 +27,7 @@ public class InputGraphChecker {
     private String metaProvenanceId;
     private List<Entity> forwardConnectors;
     private List<Entity> backwardConnectors;
+    private List<Entity> specializedForwardConnectors;
 
     public InputGraphChecker(String graph,
                              String format,
@@ -67,6 +68,11 @@ public class InputGraphChecker {
         return backwardConnectors;
     }
 
+    public List<Entity> getSpecializedForwardConnectors() {
+        ensureValidated();
+        return specializedForwardConnectors;
+    }
+
     public void parseGraph() {
         this.document = ProvToolboxUtils.parseDocument(graph, format);
         this.bundle = extractSingleBundle(document);
@@ -74,6 +80,7 @@ public class InputGraphChecker {
         this.metaProvenanceId = resolveMetaProvenanceId(mainActivity);
         this.forwardConnectors = findConnectors(bundle, ProvConstants.CPM_FORWARD_CONNECTOR);
         this.backwardConnectors = findConnectors(bundle, ProvConstants.CPM_BACKWARD_CONNECTOR);
+        this.specializedForwardConnectors = findConnectors(bundle, ProvConstants.CPM_FORWARD_CONNECTOR_SPEC);
     }
 
     public void checkIdsMatch(String graphId) {
@@ -211,11 +218,19 @@ public class InputGraphChecker {
         if (!cpmValidator.checkForwardConnectorsAttributes(forwardConnectors)) {
             throw new IllegalArgumentException("Forward connector(s) missing mandatory attributes.");
         }
+        if (!cpmValidator.checkSpecializedForwardConnectorsAttributes(specializedForwardConnectors)) {
+            throw new IllegalArgumentException("Specialized forward connector(s) missing mandatory attributes.");
+        }
 
         CPMValidator.ValidationResult result = cpmValidator.checkCpmConstraints(
-                bundle, forwardConnectors, backwardConnectors, mainActivity);
+                bundle, forwardConnectors, backwardConnectors, specializedForwardConnectors, mainActivity);
         if (!result.ok()) {
             throw new IllegalArgumentException("CPM problem: " + result.message());
+        }
+
+        CPMValidator.ValidationResult agentResult = cpmValidator.checkCurrentAgentPresent(bundle);
+        if (!agentResult.ok()) {
+            throw new IllegalArgumentException("CPM problem: " + agentResult.message());
         }
 
         if (provValidator != null && !provValidator.isValid(document)) {
@@ -311,7 +326,7 @@ public class InputGraphChecker {
     }
 
     private void ensureValidated() {
-        if (forwardConnectors == null || backwardConnectors == null) {
+        if (forwardConnectors == null || backwardConnectors == null || specializedForwardConnectors == null) {
             throw new IllegalStateException(NOT_YET_VALIDATED_ERROR);
         }
     }

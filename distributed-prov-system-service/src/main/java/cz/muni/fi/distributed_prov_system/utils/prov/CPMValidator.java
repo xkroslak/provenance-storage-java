@@ -11,10 +11,15 @@ public interface CPMValidator {
 
     boolean checkForwardConnectorsAttributes(List<Entity> connectors);
 
+    boolean checkSpecializedForwardConnectorsAttributes(List<Entity> connectors);
+
     ValidationResult checkCpmConstraints(Bundle bundle,
                                          List<Entity> forwardConnectors,
                                          List<Entity> backwardConnectors,
+                                         List<Entity> specializedForwardConnectors,
                                          Activity mainActivity);
+
+    ValidationResult checkCurrentAgentPresent(Bundle bundle);
 
     record ValidationResult(boolean ok, String message) {
     }
