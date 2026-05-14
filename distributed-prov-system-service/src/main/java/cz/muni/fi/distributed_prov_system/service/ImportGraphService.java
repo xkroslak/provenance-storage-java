@@ -46,7 +46,7 @@ public class ImportGraphService {
     }
 
     @Transactional
-    public void importGraph(StoreGraphRequestDTO body,
+    public boolean importGraph(StoreGraphRequestDTO body,
                             Map<String, Object> tokenEnvelope,
                             String organizationId,
                             String documentId,
@@ -63,12 +63,13 @@ public class ImportGraphService {
 
         if (isUpdate) {
             updateMetaProvenance(identifier, metaBundleId, tokenData, documentId, neoDocument);
+            return false;
         } else {
-            createMetaProvenance(identifier, metaBundleId, tokenData, neoDocument);
+            return createMetaProvenance(identifier, metaBundleId, tokenData, neoDocument);
         }
     }
 
-    private void createMetaProvenance(String identifier,
+    private boolean createMetaProvenance(String identifier,
                                       String metaBundleId,
                                       Map<String, Object> tokenData,
                                       Document document) {
@@ -112,6 +113,7 @@ public class ImportGraphService {
         activityRepository.save(tokenMeta.activity);
         entityRepository.save(tokenMeta.tokenEntity);
         entityRepository.save(firstVersion);
+        return metaBundleNew;
     }
 
     private void updateMetaProvenance(String identifier,

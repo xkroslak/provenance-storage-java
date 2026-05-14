@@ -14,14 +14,19 @@ public final class ProvConstants {
     public static final String CPM_ID = cpm("id");
     public static final String CPM_SENDER_AGENT = cpm("senderAgent");
     public static final String CPM_RECEIVER_AGENT = cpm("receiverAgent");
+    public static final String CPM_CURRENT_AGENT = cpm("currentAgent");
     public static final String CPM_MAIN_ACTIVITY = cpm("mainActivity");
     public static final String CPM_BACKWARD_CONNECTOR = cpm("backwardConnector");
     public static final String CPM_FORWARD_CONNECTOR = cpm("forwardConnector");
+    public static final String CPM_FORWARD_CONNECTOR_SPEC = cpm("forwardConnectorSpec");
 
     public static final String CPM_REFERENCED_BUNDLE_ID = cpm("referencedBundleId");
     public static final String CPM_REFERENCED_META_BUNDLE_ID = cpm("referencedMetaBundleId");
     public static final String CPM_REFERENCED_BUNDLE_HASH_VALUE = cpm("referencedBundleHashValue");
     public static final String CPM_HASH_ALG = cpm("hashAlg");
+    public static final String CPM_REFERENCED_BUNDLE_SPEC_V = cpm("referencedBundleSpecV");
+    public static final String CPM_REFERENCED_META_BUNDLE_SPEC_V = cpm("referencedmetaBundleSpecV");
+    public static final String CPM_PROVENANCE_SERVICE_URI = cpm("provenanceServiceUri");
 
     public static final String CPM_TOKEN_GENERATION = cpm("tokenGeneration");
     public static final String CPM_TOKEN = cpm("token");

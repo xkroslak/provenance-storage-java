@@ -21,6 +21,8 @@ import cz.muni.fi.distributed_prov_system.exceptions.ConflictException;
 import cz.muni.fi.distributed_prov_system.exceptions.NotFoundException;
 import cz.muni.fi.distributed_prov_system.exceptions.UnauthorizedException;
 import cz.muni.fi.distributed_prov_system.utils.TokenUtils;
+import cz.muni.fi.distributed_prov_system.utils.prov.ConnectorResolvabilityChecker;
+import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidator;
 import cz.muni.fi.distributed_prov_system.utils.prov.CPMValidatorImpl;
 import cz.muni.fi.distributed_prov_system.utils.prov.InputGraphChecker;
 import cz.muni.fi.distributed_prov_system.utils.prov.ProvDocumentValidatorImpl;
@@ -48,6 +50,7 @@ public class DocumentService {
     private final BundleRepository bundleRepository;
     private final TrustedPartyRepository trustedPartyRepository;
     private final DefaultTrustedPartyRepository defaultTrustedPartyRepository;
+    private final ConnectorResolvabilityChecker connectorResolvabilityChecker;
 
     @Autowired
     public DocumentService(AppProperties appProperties,
@@ -59,7 +62,8 @@ public class DocumentService {
                            EntityRepository entityRepository,
                            BundleRepository bundleRepository,
                            TrustedPartyRepository trustedPartyRepository,
-                           DefaultTrustedPartyRepository defaultTrustedPartyRepository) {
+                           DefaultTrustedPartyRepository defaultTrustedPartyRepository,
+                           ConnectorResolvabilityChecker connectorResolvabilityChecker) {
         this.appProperties = appProperties;
         this.tpClient = tpClient;
         this.organizationService = organizationService;
@@ -70,6 +74,7 @@ public class DocumentService {
         this.bundleRepository = bundleRepository;
         this.trustedPartyRepository = trustedPartyRepository;
         this.defaultTrustedPartyRepository = defaultTrustedPartyRepository;
+        this.connectorResolvabilityChecker = connectorResolvabilityChecker;
     }
 
     public StoreGraphResponseDTO storeDocument(String organizationId, String documentId, StoreGraphRequestDTO body) {
@@ -90,6 +95,17 @@ public class DocumentService {
             checker.validateGraph();
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException(ex.getMessage(), ex);
+        }
+
+        CPMValidator.ValidationResult resolvability = connectorResolvabilityChecker
+                .checkResolvability(checker.getBackwardConnectors());
+        if (!resolvability.ok()) {
+            throw new BadRequestException(resolvability.message());
+        }
+        CPMValidator.ValidationResult specResolvability = connectorResolvabilityChecker
+                .checkResolvability(checker.getSpecializedForwardConnectors());
+        if (!specResolvability.ok()) {
+            throw new BadRequestException(specResolvability.message());
         }
 
         String bundleIdentifier = organizationId + "_" + checker.getBundleId();
@@ -119,18 +135,19 @@ public class DocumentService {
             }
 
             Map<String, Object> tokenEnvelope = TokenUtils.parseTokenResponse(tokenResp.getBody());
-                importGraphService.importGraph(body, tokenEnvelope, organizationId, documentId,
+                boolean metaCreated = importGraphService.importGraph(body, tokenEnvelope, organizationId, documentId,
                     checker.getMetaProvenanceId(), false);
             storeTokenIntoDb(tokenEnvelope, organizationId, documentId);
             JsonNode tokenNode = toJsonNode(tokenEnvelope);
-            return new StoreGraphResponseDTO(tokenNode, null);
+            return new StoreGraphResponseDTO(tokenNode, null, metaCreated);
         }
 
         Map<String, Object> dummyToken = TokenUtils.createDummyToken(organizationId);
-        importGraphService.importGraph(body, dummyToken, organizationId, documentId,
+        boolean metaCreated = importGraphService.importGraph(body, dummyToken, organizationId, documentId,
             checker.getMetaProvenanceId(), false);
         return new StoreGraphResponseDTO(null,
-                "Trusted party is disabled therefore no token has been issued, however graph has been stored.");
+                "Trusted party is disabled therefore no token has been issued, however graph has been stored.",
+                metaCreated);
     }
 
     private JsonNode toJsonNode(Object value) {
@@ -247,6 +264,17 @@ public class DocumentService {
             throw new BadRequestException(ex.getMessage(), ex);
         }
 
+        CPMValidator.ValidationResult resolvability = connectorResolvabilityChecker
+                .checkResolvability(checker.getBackwardConnectors());
+        if (!resolvability.ok()) {
+            throw new BadRequestException(resolvability.message());
+        }
+        CPMValidator.ValidationResult specResolvability = connectorResolvabilityChecker
+                .checkResolvability(checker.getSpecializedForwardConnectors());
+        if (!specResolvability.ok()) {
+            throw new BadRequestException(specResolvability.message());
+        }
+
         validateUpdateConditions(checker.getMetaProvenanceId(), documentId, organizationId);
 
         if (!appProperties.isDisableTrustedParty()) {
@@ -276,7 +304,7 @@ public class DocumentService {
             storeTokenIntoDb(tokenEnvelope, organizationId, documentId);
 
             JsonNode tokenNode = toJsonNode(tokenEnvelope);
-            return new StoreGraphResponseDTO(tokenNode, null);
+            return new StoreGraphResponseDTO(tokenNode, null, false);
         }
 
         Map<String, Object> dummyToken = TokenUtils.createDummyToken(organizationId);
@@ -284,7 +312,8 @@ public class DocumentService {
                 checker.getMetaProvenanceId(), true);
 
         return new StoreGraphResponseDTO(null,
-                "Trusted party is disabled therefore no token has been issued, however graph has been stored.");
+                "Trusted party is disabled therefore no token has been issued, however graph has been stored.",
+                false);
     }
 
     private void validateUpdateConditions(String metaBundleId, String documentId, String organizationId) {
